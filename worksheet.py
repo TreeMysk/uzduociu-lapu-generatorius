@@ -193,22 +193,35 @@ def generuoti_pdf_tinkleli_lentele(zodziai, dydis=15, failas="out/uzduotis-paies
     story.append(grid)
     story.append(Spacer(1, 24))
 
-    # 2) Paveikslėliai + trijų linijų forma po kiekvienu
+    # 2) Paveikslėliai + trijų linijų forma PO DVI PORAS Į EILĘ
+    pairs = []
     for z in zodziai:
         img_path = rasti_paveiksleli(z)
-        img = Image(img_path, width=40, height=40) if img_path else Spacer(40, 40)
+        img = Image(img_path, width=36, height=36) if img_path else Spacer(36, 36)
 
-        row = [img, WritingLines(width=500, height=30)]
-        eilute = Table([row], colWidths=[50, 500])
-        eilute.setStyle(TableStyle([
+        # viena pora: [ikonėlė] [trijų linijų juosta]
+        pair = Table([[img, WritingLines(width=220, height=26)]], colWidths=[42, 220])
+        pair.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    story.append(Spacer(1, 6))
-    story.append(eilute)
+        ]))
+        pairs.append(pair)
+
+    # sudedame po 2 poras į vieną eilę (kad tilptų daugiau)
+    for i in range(0, len(pairs), 2):
+        left = pairs[i]
+        right = pairs[i+1] if i+1 < len(pairs) else Spacer(262, 0)
+        row = Table([[left, right]], colWidths=[262, 262])
+        row.setStyle(TableStyle([
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(row)
 
     doc.build(story)
     print(f"✅ PDF sukurtas: {failas}")
