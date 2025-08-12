@@ -301,7 +301,7 @@ def generuoti_linksniu_pdf_custom(
     if rodyti_dgs:
         t.setStyle([('SPAN', (col_index, 0), (col_index + len(linksniai) - 1, 0))])
 
-    story = [Paragraph("Pasirinktinė linksnių lentelė", st["Title"]), Spacer(1, 10), t]
+    story = [Paragraph("Linksnių lentelė", st["Title"]), Spacer(1, 10), t]
     doc.build(story)
     print(f"✅ PDF sukurtas: {failas}")
 
@@ -682,5 +682,6 @@ def generuoti_gyvunai_ir_vietos(
 
     doc.build(story)
     print(f"✅ PDF sukurtas: {failas}")
+
 
 
