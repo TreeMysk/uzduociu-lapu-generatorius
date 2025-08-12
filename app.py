@@ -79,16 +79,26 @@ with tabs[1]:
 
 # ---- 3
 with tabs[2]:
-    st.subheader("Linksnių lentelė")
+    st.subheader("Linksnių lentelė (kas/ko/kam/kuo/kur — vns. ir dgs.)")
+
     words = st.text_input("Žodžiai (kableliais)", "katė, šuo, pelė")
+    show_word = st.checkbox("Rodyti žodį šalia paveikslėlio", True)
+
     up = st.file_uploader("Paveikslėliai (pasirinktinai)", type=["png","jpg","jpeg"], accept_multiple_files=True)
-    if st.button("Generuoti linksnių PDF"):
+
+    if st.button("Generuoti 5 klausimų (vns.+dgs.) PDF"):
         for f in up:
             save_uploaded_any(f)
+
         zodziai = [w.strip() for w in words.split(",") if w.strip()]
-        outfile = OUT_DIR / "uzduotis-linksniai.pdf"
-        ws.generuoti_linksniu_pdf(zodziai, failas=str(outfile))
-        st.download_button("Atsisiųsti PDF", data=open(outfile, "rb").read(), file_name=outfile.name, mime="application/pdf")
+        outfile = OUT_DIR / "uzduotis-linksniai-5k-vns-dgs.pdf"
+        ws.generuoti_linksniu_pdf_5k_vns_dgs(
+            zodziai,
+            failas=str(outfile),
+            rodyti_zodi_salia_paveikslelio=show_word
+        )
+        st.download_button("Atsisiųsti PDF", data=open(outfile, "rb").read(),
+                           file_name=outfile.name, mime="application/pdf")
 
 # ---- 4
 with tabs[3]:
@@ -139,4 +149,5 @@ with tabs[5]:
         vietos = [w.strip() for w in places.split(",") if w.strip()]
         outfile = OUT_DIR / "uzduotis-gyvunai-vietos.pdf"
         ws.generuoti_gyvunai_ir_vietos(gyvunai, vietos, failas=str(outfile), rasymo_eiluciu_kiekis=write_lines)
+
         st.download_button("Atsisiųsti PDF", data=open(outfile, "rb").read(), file_name=outfile.name, mime="application/pdf")
