@@ -227,77 +227,81 @@ def generuoti_pdf_tinkleli_lentele(zodziai, dydis=15, failas="out/uzduotis-paies
     print(f"✅ PDF sukurtas: {failas}")
 
 # ---------- 3. Linksnių lentelė ----------
-def generuoti_linksniu_pdf_5k_vns_dgs(
+def generuoti_linksniu_pdf_custom(
     zodziai,
-    failas="out/uzduotis-linksniai-5k-vns-dgs.pdf",
+    linksniai,  # pvz. ["kas?", "kam?"]
+    rodyti_vns=True,
+    rodyti_dgs=True,
+    failas="out/uzduotis-linksniai-custom.pdf",
     rodyti_zodi_salia_paveikslelio=True
 ):
     OUT_DIR.mkdir(exist_ok=True)
-    doc = SimpleDocTemplate(
-        failas, pagesize=A4,
-        leftMargin=marge, rightMargin=marge, topMargin=40, bottomMargin=40
-    )
+    doc = SimpleDocTemplate(failas, pagesize=A4, leftMargin=marge, rightMargin=marge, topMargin=40, bottomMargin=40)
     st = getSampleStyleSheet()
     font = FONT_NAME if FONT_FILE.exists() else "Helvetica"
     st["Title"].fontName = font
     st["Normal"].fontName = font
 
-    # ---- 2-eilių antraštė:  Žodis |  Vns. (kas ko kam kuo kur) | Dgs. (kas ko kam kuo kur)
-    top_header = ["Žodis", "Vns.", "", "", "", "", "Dgs.", "", "", "", ""]
-    sub_header = ["", "kas?", "ko?", "kam?", "kuo?", "kur?", "kas?", "ko?", "kam?", "kuo?", "kur?"]
+    # 2 eilių antraštės
+    top_header = ["Žodis"]
+    sub_header = [""]
+
+    if rodyti_vns:
+        top_header += ["Vns."] * len(linksniai)
+        sub_header += linksniai
+    if rodyti_dgs:
+        top_header += ["Dgs."] * len(linksniai)
+        sub_header += linksniai
+
     data = [top_header, sub_header]
 
-    # ---- eilutės su žodžiais
+    # Eilutės
     for z in zodziai:
         img_path = rasti_paveiksleli(z)
         img = Image(img_path, width=26, height=26) if img_path else Spacer(26, 26)
-
         if rodyti_zodi_salia_paveikslelio:
-            first_cell = Table([[img, Paragraph(z.capitalize(), st["Normal"])]], colWidths=[28, 97])
-            first_cell.setStyle(TableStyle([
+            cell = Table([[img, Paragraph(z.capitalize(), st["Normal"])]], colWidths=[28, 97])
+            cell.setStyle(TableStyle([
                 ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
                 ('LEFTPADDING', (0,0), (-1,-1), 0),
                 ('RIGHTPADDING', (0,0), (-1,-1), 2),
             ]))
             first_w = 130
         else:
-            first_cell = img
+            cell = img
             first_w = 42
 
-        row = [first_cell] + [""] * 10
+        row = [cell] + [""] * ((len(linksniai) * (1 if rodyti_vns else 0)) + (len(linksniai) * (1 if rodyti_dgs else 0)))
         data.append(row)
 
-    # ---- pločiai: ~495pt naudingo pločio
+    # Stulpelių pločiai
+    total_cols = len(data[0])
     rest_total = 495 - first_w
-    each_w = max(34, int(rest_total / 10))  # 10 stulpelių „ką kam…“
-    col_widths = [first_w] + [each_w] * 10
+    each_w = max(34, int(rest_total / (total_cols - 1)))
+    col_widths = [first_w] + [each_w] * (total_cols - 1)
 
+    # Lentelė
     t = Table(data, colWidths=col_widths, repeatRows=2)
     t.setStyle(TableStyle([
-        # grotuotė ir šriftai
         ('GRID', (0, 0), (-1, -1), 1, colors.grey),
         ('FONTNAME', (0, 0), (-1, 1), font),
         ('FONTSIZE', (0, 0), (-1, 1), 11),
         ('ALIGN', (1, 2), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-
-        # antraštės fonai
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
         ('BACKGROUND', (0, 1), (-1, 1), colors.whitesmoke),
-
-        # sugrupavimų SPAN'ai
-        ('SPAN', (0, 0), (0, 1)),    # „Žodis“ per dvi antraštės eilutes
-        ('SPAN', (1, 0), (5, 0)),    # „Vns.“ per 5 stulpelius
-        ('SPAN', (6, 0), (10, 0)),   # „Dgs.“ per 5 stulpelius
-
-        # paraštės, kad būtų vietos rašymui
-        ('TOPPADDING', (1, 2), (-1, -1), 10),
-        ('BOTTOMPADDING', (1, 2), (-1, -1), 10),
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('SPAN', (0, 0), (0, 1)),
     ]))
 
-    story = [Paragraph("Užpildyk: kas, ko, kam, kuo, kur — vns. ir dgs.", st["Title"]), Spacer(1, 10), t]
+    # Span Vns/Dgs viršuje
+    col_index = 1
+    if rodyti_vns:
+        t.setStyle([('SPAN', (col_index, 0), (col_index + len(linksniai) - 1, 0))])
+        col_index += len(linksniai)
+    if rodyti_dgs:
+        t.setStyle([('SPAN', (col_index, 0), (col_index + len(linksniai) - 1, 0))])
+
+    story = [Paragraph("Pasirinktinė linksnių lentelė", st["Title"]), Spacer(1, 10), t]
     doc.build(story)
     print(f"✅ PDF sukurtas: {failas}")
 
@@ -678,4 +682,5 @@ def generuoti_gyvunai_ir_vietos(
 
     doc.build(story)
     print(f"✅ PDF sukurtas: {failas}")
+
 
