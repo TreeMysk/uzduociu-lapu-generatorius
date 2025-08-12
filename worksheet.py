@@ -227,19 +227,11 @@ def generuoti_pdf_tinkleli_lentele(zodziai, dydis=15, failas="out/uzduotis-paies
     print(f"✅ PDF sukurtas: {failas}")
 
 # ---------- 3. Linksnių lentelė ----------
-def sugeneruoti_linksniu_lentele(zodziai):
-    lentele = [["Žodis", "vns. kas?", "dgs. kas?", "vns. ką?", "vns. kur?", "dgs. kur?"]]
-    for z in zodziai:
-        # paprasta, vėliau galima protinginti
-        vns_kas = z
-        dgs_kas = z + "s"
-        vns_ka = z + "ą"
-        vns_kur = z + "e"
-        dgs_kur = z + "se"
-        lentele.append([z, vns_kas, dgs_kas, vns_ka, vns_kur, dgs_kur])
-    return lentele
-
-def generuoti_linksniu_pdf(zodziai, failas="out/uzduotis-linksniai.pdf"):
+def generuoti_linksniu_pdf_5k_vns_dgs(
+    zodziai,
+    failas="out/uzduotis-linksniai-5k-vns-dgs.pdf",
+    rodyti_zodi_salia_paveikslelio=True
+):
     OUT_DIR.mkdir(exist_ok=True)
     doc = SimpleDocTemplate(
         failas, pagesize=A4,
@@ -250,95 +242,62 @@ def generuoti_linksniu_pdf(zodziai, failas="out/uzduotis-linksniai.pdf"):
     st["Title"].fontName = font
     st["Normal"].fontName = font
 
-    # Didesnis šriftas žodžiui šalia paveikslėlio
-    word_style = ParagraphStyle(
-        "WordStyle", parent=st["Normal"],
-        fontName=font, fontSize=14, leading=16
-    )
+    # ---- 2-eilių antraštė:  Žodis |  Vns. (kas ko kam kuo kur) | Dgs. (kas ko kam kuo kur)
+    top_header = ["Žodis", "Vns.", "", "", "", "", "Dgs.", "", "", "", ""]
+    sub_header = ["", "kas?", "ko?", "kam?", "kuo?", "kur?", "kas?", "ko?", "kam?", "kuo?", "kur?"]
+    data = [top_header, sub_header]
 
-    # Antraštė
-    header = ["Žodis", "vns. kas?", "dgs. kas?", "vns. ką?", "vns. kur?", "dgs. kur?"]
-    data = [header]
-
+    # ---- eilutės su žodžiais
     for z in zodziai:
-        # 1 stulpelis: paveikslėlis KAIRĖJE + žodis DEŠINĖJE
         img_path = rasti_paveiksleli(z)
         img = Image(img_path, width=26, height=26) if img_path else Spacer(26, 26)
 
-        cell = Table([[img, Paragraph(z.capitalize(), word_style)]], colWidths=[30, 95])
-        cell.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 2),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-        ]))
+        if rodyti_zodi_salia_paveikslelio:
+            first_cell = Table([[img, Paragraph(z.capitalize(), st["Normal"])]], colWidths=[28, 97])
+            first_cell.setStyle(TableStyle([
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('LEFTPADDING', (0,0), (-1,-1), 0),
+                ('RIGHTPADDING', (0,0), (-1,-1), 2),
+            ]))
+            first_w = 130
+        else:
+            first_cell = img
+            first_w = 42
 
-        # 5 visiškai tušti langeliai
-        blanks = ["" for _ in range(5)]
-        data.append([cell] + blanks)
+        row = [first_cell] + [""] * 10
+        data.append(row)
 
-    # A4 naudingo pločio ~495 pt su tavo paraštėmis
-    col_widths = [125, 62, 62, 62, 62, 62]
+    # ---- pločiai: ~495pt naudingo pločio
+    rest_total = 495 - first_w
+    each_w = max(34, int(rest_total / 10))  # 10 stulpelių „ką kam…“
+    col_widths = [first_w] + [each_w] * 10
 
-    t = Table(data, colWidths=col_widths, repeatRows=1)
+    t = Table(data, colWidths=col_widths, repeatRows=2)
     t.setStyle(TableStyle([
+        # grotuotė ir šriftai
         ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
-        ('FONTNAME', (0, 0), (-1, 0), font),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 1), font),
+        ('FONTSIZE', (0, 0), (-1, 1), 11),
+        ('ALIGN', (1, 2), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+
+        # antraštės fonai
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+        ('BACKGROUND', (0, 1), (-1, 1), colors.whitesmoke),
+
+        # sugrupavimų SPAN'ai
+        ('SPAN', (0, 0), (0, 1)),    # „Žodis“ per dvi antraštės eilutes
+        ('SPAN', (1, 0), (5, 0)),    # „Vns.“ per 5 stulpelius
+        ('SPAN', (6, 0), (10, 0)),   # „Dgs.“ per 5 stulpelius
+
+        # paraštės, kad būtų vietos rašymui
+        ('TOPPADDING', (1, 2), (-1, -1), 10),
+        ('BOTTOMPADDING', (1, 2), (-1, -1), 10),
         ('LEFTPADDING', (0, 0), (-1, -1), 4),
         ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
     ]))
 
-    story = [Paragraph("Užpildyk lentelę:", st["Title"]), Spacer(1, 12), t]
-    doc.build(story)
-    print(f"✅ PDF sukurtas: {failas}")
-
-    def generuoti_linksniu_pdf_tuscia(zodziai, failas="out/uzduotis-linksniai.pdf"):
-        OUT_DIR.mkdir(exist_ok=True)
-    doc = SimpleDocTemplate(
-        failas, pagesize=A4,
-        leftMargin=marge, rightMargin=marge, topMargin=40, bottomMargin=40
-    )
-    st = getSampleStyleSheet()
-    font = FONT_NAME if FONT_FILE.exists() else "Helvetica"
-    st["Title"].fontName = font
-    st["Normal"].fontName = font
-
-    # Antraštė
-    header = ["Žodis", "vns. kas?", "dgs. kas?", "vns. ką?", "vns. kur?", "dgs. kur?"]
-    data = [header]
-
-    for z in zodziai:
-        # Pirmas stulpelis – tik paveikslėlis (jei yra)
-        img_path = rasti_paveiksleli(z)
-        img = Image(img_path, width=26, height=26) if img_path else Spacer(26, 26)
-
-        # Tušti langeliai rašymui ranka
-        blanks = ["" for _ in range(5)]
-        data.append([img] + blanks)
-
-    # Stulpelių plotis
-    col_widths = [40, 90, 90, 90, 90, 90]
-
-    t = Table(data, colWidths=col_widths, repeatRows=1)
-    t.setStyle(TableStyle([
-        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
-        ('FONTNAME', (0, 0), (-1, 0), font),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 1), (-1, -1), 12),  # Didesnis aukštis rašymui
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 12),
-    ]))
-
-    story = [Paragraph("Užpildyk lentelę:", st["Title"]), Spacer(1, 12), t]
+    story = [Paragraph("Užpildyk: kas, ko, kam, kuo, kur — vns. ir dgs.", st["Title"]), Spacer(1, 10), t]
     doc.build(story)
     print(f"✅ PDF sukurtas: {failas}")
 
@@ -719,3 +678,4 @@ def generuoti_gyvunai_ir_vietos(
 
     doc.build(story)
     print(f"✅ PDF sukurtas: {failas}")
+
